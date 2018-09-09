@@ -17,7 +17,7 @@ typedef struct mediaSubType{
     char * subType;
 }mediaSubType_t;
 
-enum status {TYPE, SUBTYPE, FINISH, ERROR};
+enum status {TYPE, SUBTYPE, FINISH, ERROR, ASTERISK1, ASTERISK2};
 
 #define printTrue 1
 #define printFalse 0

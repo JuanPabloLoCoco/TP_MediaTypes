@@ -137,6 +137,7 @@ mediaType_t * makeMediaRange(char * mediaRange)
 {
     mediaType_t * head = NULL;          //HEAD OF ACCEPT-RANGE
 
+
     int i = 0;
     enum status status1;
     status1 = TYPE;                      // SHOW THE STATUS
@@ -146,7 +147,6 @@ mediaType_t * makeMediaRange(char * mediaRange)
 
     int subTypeIndex = 0;               // INDEX OF SUBTYPE
     char * subType = malloc(10);        // SUBTYPE CHAR *
-
     while (mediaRange[i] != '\0')
     {
         switch (status1)
@@ -161,17 +161,13 @@ mediaType_t * makeMediaRange(char * mediaRange)
                     i++;
                     break;
                 }
-                else if (mediaRange[i] == '*')
+                else if (mediaRange[i] == '*' && typeIndex == 0)
                 {
-                    if (typeIndex != 0 || mediaRange[i+1] != '/' || mediaRange[i+1] != '\0')
-                    {
-                        status1 = ERROR;
-                        break;
-                    }
                     increaseArray(type,typeIndex);
                     type[typeIndex] = mediaRange[i];
                     typeIndex++;
                     i++;
+                    status1 = ASTERISK1;
                     break;
                 }
                 else if(mediaRange[i] == '/' && typeIndex > 0)
@@ -196,24 +192,13 @@ mediaType_t * makeMediaRange(char * mediaRange)
                     i++;
                     break;
                 }
-                else if (mediaRange[i] == '*')
+                else if (mediaRange[i] == '*' && subTypeIndex == 0)
                 {
-                    if (subTypeIndex != 0)
-                    {
-                        status1 = ERROR;
-                        break;
-                    }
-
                     increaseArray(subType,subTypeIndex);
                     subType[subTypeIndex] = mediaRange[i];
                     subTypeIndex++;
-                    if ((mediaRange[i+1] != '\0' && mediaRange[i+1] != ';' && mediaRange[i+1] !=',') || type[0] != '*')
-                    {
-                        printf("FALLA ACA \n");
-                        status1 = ERROR;
-                        break;
-                    }
                     i++;
+                    status1 = ASTERISK2;
                     break;
                 }
                 else if (isdigit(mediaRange[i]) || mediaRange[i] =='*' || mediaRange[i] == '+' || mediaRange[i]=='.')
@@ -226,32 +211,30 @@ mediaType_t * makeMediaRange(char * mediaRange)
                 }
                 else if (mediaRange[i] == ',' || mediaRange[i] == ';')
                 {
-                    printf("HAY UNA COMA");
-                    increaseArray(subType,subTypeIndex);
-                    subType[subTypeIndex] = '\0';
-                    printf("SUB TYPE :");
-                    printf("%s \n", subType);
-
-                    if (type[0] == '*' && subType[0] != '*')
+                    if (type[0] == '*')
                     {
                         status1 = ERROR;
                         break;
                     }
+                    increaseArray(subType,subTypeIndex);
+                    subType[subTypeIndex] = '\0';
 
                     mediaType_t * toAdd = newMediaType(type, typeIndex + 1, subType, subTypeIndex + 1);
-                    addMediaType(head, toAdd);
+                    head = addMediaType(head, toAdd);
 
-                    if (mediaRange[i] == ';') {
+                    typeIndex = 0;
+                    subTypeIndex = 0;
+                    free(type);
+                    free(subType);
+                    type = malloc(10);
+                    subType = malloc(10);
+                    i++;
+
+                    if (mediaRange[i] == ';')
+                    {
                         status1 = FINISH;
                     } else {
-                        typeIndex = 0;
-                        subTypeIndex = 0;
-                        free(type);
-                        free(subType);
-                        type = malloc(10);
-                        subType = malloc(10);
                         status1 = TYPE;
-                        i++;
                     }
                     break;
                 } else {
@@ -262,12 +245,6 @@ mediaType_t * makeMediaRange(char * mediaRange)
             case FINISH:
             {
                 if (mediaRange[i] == ','){
-                    typeIndex = 0;
-                    subTypeIndex = 0;
-                    free(type);
-                    free(subType);
-                    type = malloc(10);
-                    subType = malloc(10);
                     status1 = TYPE;
                 }
                 i++;
@@ -288,23 +265,69 @@ mediaType_t * makeMediaRange(char * mediaRange)
                 i++;
                 break;
             }
+            case ASTERISK1:
+            {
+                if (mediaRange[i] == '/')
+                {
+                    increaseArray(type,typeIndex);
+                    type[typeIndex]='\0';
+                    status1 = SUBTYPE;
+                    i++;
+                    break;
+                } else {
+                    status1 = ERROR;
+                    break;
+                }
+            }
+            case ASTERISK2:
+            {
+                if (mediaRange[i] == ',' || mediaRange[i] == ';')
+                {
+                    increaseArray(subType,subTypeIndex);
+                    subType[subTypeIndex] = '\0';
+
+                    mediaType_t * toAdd = newMediaType(type, typeIndex + 1, subType, subTypeIndex + 1);
+                    head = addMediaType(head, toAdd);
+
+                    typeIndex = 0;
+                    subTypeIndex = 0;
+                    free(type);
+                    free(subType);
+                    type = malloc(10);
+                    subType = malloc(10);
+                    i++;
+
+                    if (mediaRange[i] == ';')
+                    {
+                        status1 = FINISH;
+                    } else {
+                        status1 = TYPE;
+                    }
+                    break;
+                } else {
+                    status1 = ERROR;
+                    break;
+                }
+            }
         }
 
     }
 
-    if (status1 == SUBTYPE)
+    if (status1 == SUBTYPE && subTypeIndex > 0 && type[0] != '*')
     {
-        if (!(type[0] == '*' && subType[0] != '*') && (typeIndex > 0 && subTypeIndex > 0))
-        {
+        increaseArray(subType,subTypeIndex);
+        subType[subTypeIndex] = '\0';
 
-            increaseArray(subType,subTypeIndex);
-            subType[subTypeIndex] = '\0';
-            printf("%s \n",subType);
-            mediaType_t * toAdd = newMediaType(type, typeIndex + 1, subType, subTypeIndex + 1);
-            printf(" %s / %s \n", toAdd->type, toAdd->subType->subType);
-            head = addMediaType(head, toAdd);
-            printf(" %s / %s \n", head->type, head->subType->subType);
-        }
+        mediaType_t * toAdd = newMediaType(type, typeIndex + 1, subType, subTypeIndex + 1);
+        head = addMediaType(head, toAdd);
+    }
+    if (status1 == ASTERISK2)
+    {
+        increaseArray(subType,subTypeIndex);
+        subType[subTypeIndex] = '\0';
+
+        mediaType_t * toAdd = newMediaType(type, typeIndex + 1, subType, subTypeIndex + 1);
+        head = addMediaType(head, toAdd);
     }
 
     free(type);
@@ -312,6 +335,7 @@ mediaType_t * makeMediaRange(char * mediaRange)
 
     return head;
 }
+
 
 
 void increaseArray (char * array, int i)

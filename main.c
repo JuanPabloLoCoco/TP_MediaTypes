@@ -20,10 +20,9 @@ int main(int argc, char * argv[]) {
         fprintf(stderr, "Too few arguments\n");
         return EXIT_FAILURE;
     }
-    printf("%s \n", argv[1]);
+
     acceptRange = makeMediaRange(argv[1]);
 
-    printRange(acceptRange);
     if (acceptRange == NULL)
     {
         return 0;
@@ -46,14 +45,14 @@ int main(int argc, char * argv[]) {
 
         if (strcmp(buffer,"exit") == 0 || strcmp(buffer,"-1") == 0)
         {
-            printf("HOLA");
             flag = 0;
         }
         else
         {
             toAccept = makeMediaRange(buffer);
+            printf("\n");
             printAns(isAcceptable(acceptRange , toAccept));
-
+            free(toAccept);
         }
     }
 
