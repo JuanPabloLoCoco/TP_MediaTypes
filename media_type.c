@@ -201,7 +201,7 @@ mediaType_t * makeMediaRange(char * mediaRange)
                     status1 = ASTERISK2;
                     break;
                 }
-                else if (isdigit(mediaRange[i]) || mediaRange[i] =='*' || mediaRange[i] == '+' || mediaRange[i]=='.')
+                else if (isdigit(mediaRange[i]) || mediaRange[i] =='*' || mediaRange[i] == '+' || mediaRange[i]=='.' || mediaRange[i] == '-')
                 {
                     increaseArray(subType,subTypeIndex);
                     subType[subTypeIndex] = mediaRange[i];
