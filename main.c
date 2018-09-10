@@ -10,8 +10,14 @@ char buffer[120];
 
 mediaType_t * acceptRange = NULL;
 
-int main(int argc, char * argv[]) {
+int main(int argc, char * argv[])
+{
 
+    int i;
+    char c;
+    int flag = 1;
+
+    mediaType_t * toAccept = NULL;
 
     // Revision of parameters
 
@@ -28,10 +34,6 @@ int main(int argc, char * argv[]) {
         return 0;
     }
 
-    int i = 0;
-    char c;
-    int flag = 1;
-    mediaType_t * toAccept = NULL;
 
     while (flag == 1)
     {
@@ -52,21 +54,11 @@ int main(int argc, char * argv[]) {
             toAccept = makeMediaRange(buffer);
             printf("\n");
             printAns(isAcceptable(acceptRange , toAccept));
-            free(toAccept);
+            freeMediaType(toAccept);
         }
     }
 
     freeMemory();
-
-    //Transform of media-range;
-
-    /*
-     * while (true){
-     * * * Leo palabra de entrada estandar
-     * * * Devuelvo su formato
-     * * * Verifico si se encuentra en mi rango (0 se encuentra, 1 no se encuentra)
-     * }
-     */
 
     return 0;
 }
@@ -89,6 +81,7 @@ void printAns(int ans)
             break;
     }
 }
+
 void freeMemory()
 {
     freeMediaType(acceptRange);

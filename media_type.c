@@ -8,7 +8,10 @@
 #include <ctype.h>
 #include "media_type.h"
 
-
+char type [BUFF_SIZE];
+char subType[BUFF_SIZE];
+int typeIndex = 0;
+int subTypeIndex = 0;
 
 mediaType_t * addMediaType(mediaType_t * dest, mediaType_t * toAdd)
 {
@@ -30,7 +33,7 @@ mediaType_t * addMediaType(mediaType_t * dest, mediaType_t * toAdd)
         {
             if (toAdd->subType->subType[0] == '*')
             {
-                if (dest->subType->subType[0]=='*')
+                if (dest->subType->subType[0] == '*')
                 {
                     return dest;
                 }
@@ -108,28 +111,29 @@ void freeOneMediaType(mediaType_t * toFree)
     free(toFree);
 }
 
-void freeMediaType(mediaType_t * head)
+void freeMediaType(mediaType_t * myType)
 {
-    mediaType_t * aux;
-    while (head != NULL)
+    if (myType == NULL)
     {
-        aux = head->next;
-        freeSubMediaType(head->subType);
-        free(head);
-        head = aux;
+        return;
     }
+    freeMediaType(myType->next);
+    freeSubMediaType(myType->subType);
+    free(myType->type);
+    free(myType);
+    return;
 }
 
-void freeSubMediaType(mediaSubType_t * head)
+void freeSubMediaType(mediaSubType_t * mySubType)
 {
-    mediaSubType_t *  subMediaAux = NULL;
-    while (head !=  NULL)
+    if (mySubType == NULL)
     {
-        subMediaAux = head->next;
-        free(head->subType);
-        free(head);
-        head = subMediaAux;
+        return;
     }
+    freeSubMediaType(mySubType->next);
+    free(mySubType->subType);
+    free(mySubType);
+    return;
  }
 
 
@@ -137,25 +141,27 @@ mediaType_t * makeMediaRange(char * mediaRange)
 {
     mediaType_t * head = NULL;          //HEAD OF ACCEPT-RANGE
 
-
     int i = 0;
+
+    typeIndex = 0;
+    subTypeIndex = 0;
+
     enum status status1;
     status1 = TYPE;                      // SHOW THE STATUS
 
-    int typeIndex = 0;                  // INDEX OF TYPE
-    char * type = malloc(10);           // TYPE CHAR *
-
-    int subTypeIndex = 0;               // INDEX OF SUBTYPE
-    char * subType = malloc(10);        // SUBTYPE CHAR *
     while (mediaRange[i] != '\0')
     {
         switch (status1)
         {
             case TYPE:
             {
+                if (typeIndex > BUFF_SIZE-1)
+                {
+                    status1 = ERROR;
+                    break;
+                }
                 if (isalpha(mediaRange[i]))
                 {
-                    increaseArray(type,typeIndex);
                     type[typeIndex] = (char) tolower(mediaRange[i]);
                     typeIndex++;
                     i++;
@@ -163,7 +169,6 @@ mediaType_t * makeMediaRange(char * mediaRange)
                 }
                 else if (mediaRange[i] == '*' && typeIndex == 0)
                 {
-                    increaseArray(type,typeIndex);
                     type[typeIndex] = mediaRange[i];
                     typeIndex++;
                     i++;
@@ -172,7 +177,6 @@ mediaType_t * makeMediaRange(char * mediaRange)
                 }
                 else if(mediaRange[i] == '/' && typeIndex > 0)
                 {
-                    increaseArray(type,typeIndex);
                     type[typeIndex]='\0';
                     status1 = SUBTYPE;
                     i++;
@@ -184,9 +188,14 @@ mediaType_t * makeMediaRange(char * mediaRange)
             }
             case SUBTYPE:
             {
+                if (subTypeIndex > BUFF_SIZE-1)
+                {
+                    status1 = ERROR;
+                    break;
+                }
+
                 if (isalpha(mediaRange[i]))
                 {
-                    increaseArray(subType, subTypeIndex);
                     subType[subTypeIndex] = (char) tolower(mediaRange[i]);
                     subTypeIndex++;
                     i++;
@@ -194,16 +203,14 @@ mediaType_t * makeMediaRange(char * mediaRange)
                 }
                 else if (mediaRange[i] == '*' && subTypeIndex == 0)
                 {
-                    increaseArray(subType,subTypeIndex);
                     subType[subTypeIndex] = mediaRange[i];
                     subTypeIndex++;
                     i++;
                     status1 = ASTERISK2;
                     break;
                 }
-                else if (isdigit(mediaRange[i]) || mediaRange[i] =='*' || mediaRange[i] == '+' || mediaRange[i]=='.' || mediaRange[i] == '-')
+                else if (isdigit(mediaRange[i]) || mediaRange[i] == '*' || mediaRange[i] == '+' || mediaRange[i]== '.' || mediaRange[i] == '-')
                 {
-                    increaseArray(subType,subTypeIndex);
                     subType[subTypeIndex] = mediaRange[i];
                     subTypeIndex++;
                     i++;
@@ -216,7 +223,6 @@ mediaType_t * makeMediaRange(char * mediaRange)
                         status1 = ERROR;
                         break;
                     }
-                    increaseArray(subType,subTypeIndex);
                     subType[subTypeIndex] = '\0';
 
                     mediaType_t * toAdd = newMediaType(type, typeIndex + 1, subType, subTypeIndex + 1);
@@ -224,10 +230,6 @@ mediaType_t * makeMediaRange(char * mediaRange)
 
                     typeIndex = 0;
                     subTypeIndex = 0;
-                    free(type);
-                    free(subType);
-                    type = malloc(10);
-                    subType = malloc(10);
                     i++;
 
                     if (mediaRange[i] == ';')
@@ -244,7 +246,8 @@ mediaType_t * makeMediaRange(char * mediaRange)
             }
             case FINISH:
             {
-                if (mediaRange[i] == ','){
+                if (mediaRange[i] == ',')
+                {
                     status1 = TYPE;
                 }
                 i++;
@@ -256,10 +259,6 @@ mediaType_t * makeMediaRange(char * mediaRange)
                 {
                     typeIndex = 0;
                     subTypeIndex = 0;
-                    free(type);
-                    free(subType);
-                    type = malloc(10);
-                    subType = malloc(10);
                     status1 = TYPE;
                 }
                 i++;
@@ -269,7 +268,6 @@ mediaType_t * makeMediaRange(char * mediaRange)
             {
                 if (mediaRange[i] == '/')
                 {
-                    increaseArray(type,typeIndex);
                     type[typeIndex]='\0';
                     status1 = SUBTYPE;
                     i++;
@@ -283,7 +281,6 @@ mediaType_t * makeMediaRange(char * mediaRange)
             {
                 if (mediaRange[i] == ',' || mediaRange[i] == ';')
                 {
-                    increaseArray(subType,subTypeIndex);
                     subType[subTypeIndex] = '\0';
 
                     mediaType_t * toAdd = newMediaType(type, typeIndex + 1, subType, subTypeIndex + 1);
@@ -291,10 +288,6 @@ mediaType_t * makeMediaRange(char * mediaRange)
 
                     typeIndex = 0;
                     subTypeIndex = 0;
-                    free(type);
-                    free(subType);
-                    type = malloc(10);
-                    subType = malloc(10);
                     i++;
 
                     if (mediaRange[i] == ';')
@@ -315,36 +308,21 @@ mediaType_t * makeMediaRange(char * mediaRange)
 
     if (status1 == SUBTYPE && subTypeIndex > 0 && type[0] != '*')
     {
-        increaseArray(subType,subTypeIndex);
         subType[subTypeIndex] = '\0';
-
         mediaType_t * toAdd = newMediaType(type, typeIndex + 1, subType, subTypeIndex + 1);
         head = addMediaType(head, toAdd);
     }
     if (status1 == ASTERISK2)
     {
-        increaseArray(subType,subTypeIndex);
         subType[subTypeIndex] = '\0';
-
         mediaType_t * toAdd = newMediaType(type, typeIndex + 1, subType, subTypeIndex + 1);
         head = addMediaType(head, toAdd);
     }
-
-    free(type);
-    free(subType);
 
     return head;
 }
 
 
-
-void increaseArray (char * array, int i)
-{
-    if (i%10 == 0)
-    {
-        array = realloc(array, (size_t) (i + 10));
-    }
-}
 
 /*
  * Returns 0 if is TRUE;
@@ -400,6 +378,7 @@ void printRange (mediaType_t * toPrint)
     printf("The medias accept Range is: \n");
     mediaType_t * typeIterator = toPrint;
     mediaSubType_t * subTypeIterator = NULL;
+
     while (typeIterator != NULL)
     {
         subTypeIterator = typeIterator->subType;
